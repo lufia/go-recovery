@@ -1,9 +1,19 @@
 package recovery
 
 import (
+	"bytes"
+	"fmt"
 	"sync"
 	"testing"
 )
+
+type memLogger struct {
+	buf bytes.Buffer
+}
+
+func (m *memLogger) Error(msg string, args ...any) {
+	fmt.Fprintf(&m.buf, msg, args...)
+}
 
 func TestRecover(t *testing.T) {
 	v := Recover(func() {
@@ -25,6 +35,17 @@ func TestRecover_panic(t *testing.T) {
 	}
 }
 
+func TestRecover_logging(t *testing.T) {
+	const msg = "should panic"
+	var m memLogger
+	Recover(func() {
+		panic(msg)
+	}, WithLogger(&m))
+	if s := m.buf.String(); s != msg {
+		t.Errorf("Recover outputs %q; want %q", s, msg)
+	}
+}
+
 func TestGo_panic(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -33,4 +54,21 @@ func TestGo_panic(t *testing.T) {
 		panic("intentionally panic")
 	})
 	wg.Wait()
+}
+
+func TestGo_logging(t *testing.T) {
+	const msg = "intentionally panic"
+	var (
+		wg sync.WaitGroup
+		m  memLogger
+	)
+	wg.Add(1)
+	Go(func() {
+		defer wg.Done()
+		panic(msg)
+	}, WithLogger(&m))
+	wg.Wait()
+	if s := m.buf.String(); s != msg {
+		t.Errorf("Go outputs %q; want %q", s, msg)
+	}
 }
