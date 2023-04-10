@@ -81,3 +81,20 @@ func TestGo_logging(t *testing.T) {
 		t.Errorf("Go outputs %q; want %q", s, msg)
 	}
 }
+
+func TestDo_panic(t *testing.T) {
+	Do(func() {
+		panic("intentionally panic")
+	})
+}
+
+func TestDo_logging(t *testing.T) {
+	const msg = "intentionally panic"
+	var m memLogger
+	Do(func() {
+		panic(msg)
+	}, WithLogger(&m))
+	if s := m.String(); s != msg {
+		t.Errorf("Do outputs %q; want %q", s, msg)
+	}
+}
