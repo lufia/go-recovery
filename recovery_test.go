@@ -9,10 +9,19 @@ import (
 
 type memLogger struct {
 	buf bytes.Buffer
+	mu  sync.Mutex
 }
 
 func (m *memLogger) Error(msg string, args ...any) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	fmt.Fprintf(&m.buf, msg, args...)
+}
+
+func (m *memLogger) String() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.buf.String()
 }
 
 func TestRecover(t *testing.T) {
@@ -41,7 +50,7 @@ func TestRecover_logging(t *testing.T) {
 	Recover(func() {
 		panic(msg)
 	}, WithLogger(&m))
-	if s := m.buf.String(); s != msg {
+	if s := m.String(); s != msg {
 		t.Errorf("Recover outputs %q; want %q", s, msg)
 	}
 }
@@ -68,7 +77,7 @@ func TestGo_logging(t *testing.T) {
 		panic(msg)
 	}, WithLogger(&m))
 	wg.Wait()
-	if s := m.buf.String(); s != msg {
+	if s := m.String(); s != msg {
 		t.Errorf("Go outputs %q; want %q", s, msg)
 	}
 }
