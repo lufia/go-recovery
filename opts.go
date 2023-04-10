@@ -9,19 +9,27 @@ type options struct {
 }
 
 // Option is a option for all provided functions.
-type Option func(o *options)
+type Option interface {
+	Apply(o *options)
+}
 
 func applyOptions(o *options, opts ...Option) {
 	for _, opt := range opts {
-		opt(o)
+		opt.Apply(o)
 	}
+}
+
+type optionApplier func(o *options)
+
+func (opt optionApplier) Apply(o *options) {
+	opt(o)
 }
 
 // WithLogger sets logger will be used for logging on panic.
 func WithLogger(logger Logger) Option {
-	return func(o *options) {
+	return optionApplier(func(o *options) {
 		o.logger = logger
-	}
+	})
 }
 
 type discardLogger struct{}
