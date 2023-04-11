@@ -1,11 +1,12 @@
 package recovery
 
-type Logger interface {
-	Error(msg string, args ...any)
+// Propagator is the interface that wraps Propagate method for propagating panicking value as an error on panic.
+type Propagator interface {
+	Propagate(v any)
 }
 
 type options struct {
-	logger Logger
+	propagator Propagator
 }
 
 // Option is a option for all provided functions.
@@ -25,17 +26,9 @@ func (opt optionApplier) Apply(o *options) {
 	opt(o)
 }
 
-// WithLogger sets logger will be used for logging on panic.
-func WithLogger(logger Logger) Option {
+// WithPropagator sets p will be used for propagating on panic.
+func WithPropagator(p Propagator) Option {
 	return optionApplier(func(o *options) {
-		o.logger = logger
+		o.propagator = p
 	})
-}
-
-type discardLogger struct{}
-
-func (*discardLogger) Error(msg string, args ...any) {}
-
-var defaultOptions = options{
-	logger: &discardLogger{},
 }

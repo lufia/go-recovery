@@ -7,19 +7,19 @@ import (
 	"github.com/lufia/go-recovery"
 )
 
-type myLogger struct {
+type myPropagator struct {
 	l *log.Logger
 	i int
 }
 
-func (l *myLogger) Error(msg string, args ...any) {
-	if l.i >= 0 {
-		l.l.Printf("[i=%d]: ", l.i)
+func (p *myPropagator) Propagate(v any) {
+	if p.i >= 0 {
+		p.l.Printf("[i=%d]: ", p.i)
 	}
-	l.l.Printf(msg, args...)
+	p.l.Printf("recovered: %v", v)
 }
 
-var logger = &myLogger{
+var logger = &myPropagator{
 	l: log.Default(),
 	i: -1,
 }
@@ -27,7 +27,7 @@ var logger = &myLogger{
 func parseOptions(i int) []recovery.Option {
 	l := *logger
 	l.i = i
-	return []recovery.Option{recovery.WithLogger(&l)}
+	return []recovery.Option{recovery.WithPropagator(&l)}
 }
 
 func Example_iter() {

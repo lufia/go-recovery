@@ -15,11 +15,13 @@ func Do(f func(), opts ...Option) {
 
 // Recover runs f and returns an error value if it panicked.
 func Recover(f func(), opts ...Option) (v any) {
-	var o = defaultOptions
+	var o options
 	applyOptions(&o, opts...)
 	defer func() {
 		if e := recover(); e != nil {
-			o.logger.Error("%v", e)
+			if o.propagator != nil {
+				o.propagator.Propagate(e)
+			}
 			v = e
 		}
 	}()

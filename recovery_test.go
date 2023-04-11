@@ -1,27 +1,28 @@
 package recovery
 
 import (
-	"bytes"
-	"fmt"
+	"reflect"
 	"sync"
 	"testing"
 )
 
-type memLogger struct {
-	buf bytes.Buffer
-	mu  sync.Mutex
+type vPropagator struct {
+	a  []any
+	mu sync.Mutex
 }
 
-func (m *memLogger) Error(msg string, args ...any) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	fmt.Fprintf(&m.buf, msg, args...)
+func (p *vPropagator) Propagate(v any) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.a = append(p.a, v)
 }
 
-func (m *memLogger) String() string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.buf.String()
+func (p *vPropagator) Values() []any {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	a := make([]any, len(p.a))
+	copy(a, p.a)
+	return a
 }
 
 func TestRecover(t *testing.T) {
@@ -44,57 +45,56 @@ func TestRecover_panic(t *testing.T) {
 	}
 }
 
-func TestRecover_logging(t *testing.T) {
-	const msg = "should panic"
-	var m memLogger
-	Recover(func() {
-		panic(msg)
-	}, WithLogger(&m))
-	if s := m.String(); s != msg {
-		t.Errorf("Recover outputs %q; want %q", s, msg)
-	}
-}
-
-func TestGo_panic(t *testing.T) {
+func goSync(f func(), opts ...Option) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	Go(func() {
 		defer wg.Done()
-		panic("intentionally panic")
-	})
+		f()
+	}, opts...)
 	wg.Wait()
 }
 
-func TestGo_logging(t *testing.T) {
-	const msg = "intentionally panic"
-	var (
-		wg sync.WaitGroup
-		m  memLogger
-	)
-	wg.Add(1)
-	Go(func() {
-		defer wg.Done()
-		panic(msg)
-	}, WithLogger(&m))
-	wg.Wait()
-	if s := m.String(); s != msg {
-		t.Errorf("Go outputs %q; want %q", s, msg)
+func testWithOptions(t *testing.T, check func(t testing.TB, do func(opts ...Option)), v any) {
+	t.Helper()
+
+	tests := map[string]func(opts ...Option){
+		"Do": func(opts ...Option) {
+			Do(func() { panic(v) }, opts...)
+		},
+		"Go": func(opts ...Option) {
+			goSync(func() { panic(v) }, opts...)
+		},
+		"Recover": func(opts ...Option) {
+			Recover(func() { panic(v) }, opts...)
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			check(t, tt)
+		})
 	}
 }
 
-func TestDo_panic(t *testing.T) {
-	Do(func() {
-		panic("intentionally panic")
-	})
+func TestNoOptions(t *testing.T) {
+	testWithOptions(t, func(t testing.TB, do func(opts ...Option)) {
+		defer func() {
+			if e := recover(); e != nil {
+				t.Errorf("should recover in the wrapper function")
+			}
+		}()
+		do()
+	}, nil)
 }
 
-func TestDo_logging(t *testing.T) {
+func TestWithPropagator(t *testing.T) {
 	const msg = "intentionally panic"
-	var m memLogger
-	Do(func() {
-		panic(msg)
-	}, WithLogger(&m))
-	if s := m.String(); s != msg {
-		t.Errorf("Do outputs %q; want %q", s, msg)
-	}
+	want := []any{msg}
+	testWithOptions(t, func(t testing.TB, do func(opts ...Option)) {
+		var p vPropagator
+		do(WithPropagator(&p))
+		if a := p.Values(); !reflect.DeepEqual(a, want) {
+			t.Errorf("propagator receive %v; want %v", a, want)
+		}
+	}, msg)
 }

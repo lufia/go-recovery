@@ -10,7 +10,7 @@ type ChanIter[C receivable[T], T any] struct {
 }
 
 func ChanRange[C receivable[T], T any](c C, opts ...Option) *ChanIter[C, T] {
-	o := defaultOptions
+	var o options
 	applyOptions(&o, opts...)
 	return &ChanIter[C, T]{
 		c:       c,
