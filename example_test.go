@@ -38,11 +38,12 @@ func Example_iter() {
 		}
 		close(c)
 	})
-	recovery.ChanRange(c).Do(func(i int) {
+	recovery.ChanIter(c).Range(func(i int) bool {
 		fmt.Println(i)
 		if i == 2 {
 			panic("panic!")
 		}
+		return true
 	}, recovery.WithRangeValueParser(parseOptions))
 	// Output:
 	// 0
