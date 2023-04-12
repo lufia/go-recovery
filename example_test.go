@@ -2,32 +2,22 @@ package recovery_test
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/lufia/go-recovery"
 )
 
-type myPropagator struct {
-	l *log.Logger
-	i int
-}
+type myPropagator struct{}
 
 func (p *myPropagator) Propagate(v any) {
-	if p.i >= 0 {
-		p.l.Printf("[i=%d]: ", p.i)
-	}
-	p.l.Printf("recovered: %v", v)
+	fmt.Println("recovered:", v)
 }
 
-var logger = &myPropagator{
-	l: log.Default(),
-	i: -1,
-}
+var logger = &myPropagator{}
 
 func parseOptions(i int) []recovery.Option {
-	l := *logger
-	l.i = i
-	return []recovery.Option{recovery.WithPropagator(&l)}
+	return []recovery.Option{
+		recovery.WithPropagator(&myPropagator{}),
+	}
 }
 
 func Example_iter() {
@@ -40,7 +30,7 @@ func Example_iter() {
 	})
 	recovery.ChanIter(c).Range(func(i int) bool {
 		fmt.Println(i)
-		if i == 2 {
+		if i == 1 {
 			panic("panic!")
 		}
 		return true
@@ -48,5 +38,6 @@ func Example_iter() {
 	// Output:
 	// 0
 	// 1
+	// recovered: panic!
 	// 2
 }

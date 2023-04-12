@@ -59,10 +59,10 @@ func (c *ChanReceiver[C, T]) Range(f func(v T) bool, opts ...RangeOption[T]) {
 		if ro.valueParser != nil {
 			applyOptions(&o, ro.valueParser(v)...)
 		}
-		var cont bool
-		Do(func() {
+		cont := true
+		recoverOptions(func() {
 			cont = f(v)
-		})
+		}, &o)
 		if !cont {
 			break
 		}

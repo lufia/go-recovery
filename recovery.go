@@ -14,9 +14,13 @@ func Do(f func(), opts ...Option) {
 }
 
 // Recover runs f and returns an error value if it panicked.
-func Recover(f func(), opts ...Option) (v any) {
+func Recover(f func(), opts ...Option) any {
 	var o options
 	applyOptions(&o, opts...)
+	return recoverOptions(f, &o)
+}
+
+func recoverOptions(f func(), o *options) (v any) {
 	defer func() {
 		if e := recover(); e != nil {
 			if o.propagator != nil {

@@ -94,7 +94,7 @@ func TestWithPropagator(t *testing.T) {
 		var p vPropagator
 		do(WithPropagator(&p))
 		if a := p.Values(); !reflect.DeepEqual(a, want) {
-			t.Errorf("propagator receive %v; want %v", a, want)
+			t.Errorf("propagator receives %v; want %v", a, want)
 		}
 	}, msg)
 }
