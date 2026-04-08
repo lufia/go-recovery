@@ -2,6 +2,7 @@ package recovery_test
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/lufia/go-recovery"
 )
@@ -35,6 +36,30 @@ func Example_iter() {
 		}
 		return true
 	}, recovery.WithRangeValueParser(parseOptions))
+	// Output:
+	// 0
+	// 1
+	// recovered: panic!
+	// 2
+}
+
+func ExampleDoFunc() {
+	c := make(chan int)
+	var wg sync.WaitGroup
+	wg.Go(recovery.DoFunc(func() {
+		for i := range 3 {
+			c <- i
+		}
+		close(c)
+	}))
+	recovery.ChanIter(c).Range(func(i int) bool {
+		fmt.Println(i)
+		if i == 1 {
+			panic("panic!")
+		}
+		return true
+	}, recovery.WithRangeValueParser(parseOptions))
+	wg.Wait()
 	// Output:
 	// 0
 	// 1
