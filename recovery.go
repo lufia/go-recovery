@@ -7,6 +7,14 @@ func Go(f func(), opts ...Option) {
 	go Recover(f, opts...)
 }
 
+// DoFunc runs f in the current goroutine, returns an func()
+// When f panicked, DoFunc recover automatically.
+func DoFunc(f func(), opts ...Option) func() {
+	return func() {
+		Recover(f, opts...)
+	}
+}
+
 // Do runs f in the current goroutine.
 // When f panicked, Do recover automatically.
 func Do(f func(), opts ...Option) {
